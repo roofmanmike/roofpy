@@ -9,6 +9,7 @@ from dotenv import load_dotenv
 import snowflake.connector
 from snowflake.connector import DictCursor
 
+# Load local development settings from .env without hard-coding credentials.
 load_dotenv()
 
 REQUIRED_ENV = [
@@ -21,6 +22,7 @@ REQUIRED_ENV = [
 ]
 
 def _validate_env():
+    # Fail early with one actionable message when connection settings are incomplete.
     missing = [key for key in REQUIRED_ENV if not os.getenv(key)]
     if missing:
         raise EnvironmentError(
@@ -31,6 +33,7 @@ def _validate_env():
 @contextmanager
 def get_connection():
     """Context manager that yields a Snowflake connection and closes it cleanly."""
+    # Flow: validate settings, open the connection, yield it to the caller, then close it.
     _validate_env()
     conn = snowflake.connector.connect(
         account=os.getenv("SNOWFLAKE_ACCOUNT"),
@@ -48,8 +51,10 @@ def get_connection():
 
 def create_users_table():
     """Create the users table if it does not already exist."""
+    # Startup calls this once so later registration and login queries have a table to use.
     with get_connection() as conn:
         with conn.cursor() as cur:
+            # IF NOT EXISTS makes startup safe to repeat without replacing existing data.
             cur.execute("""
                 CREATE TABLE IF NOT EXISTS users (
                     id            INTEGER AUTOINCREMENT START 1 INCREMENT 1,
